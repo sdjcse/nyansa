@@ -54,7 +54,7 @@ full initialized to 0;
 /*
 Description P & V methods:
 P -> decrements the int variable passed to it and does not proceed if its negative, goes into a blocked queue
-V -> increments the int variable passed to that semaphore and reterieves the element from blocked queue and context switches to that element 
+V -> increments the int variable passed to that semaphore and reterieves the thread from blocked queue and context switches to that thread
 */
 
 Producer
