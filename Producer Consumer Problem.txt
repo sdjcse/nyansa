@@ -1,0 +1,78 @@
+Problem:
+Single producer & Multiple consumer
+
+1) Producer
+2) while (true) {
+3)       item = generate_item()
+4)       mutex.lock()
+5)       fifo_queue.push(item)
+6)       mutex.unlock()
+7)       condition.signal()
+8)}
+
+9) Consumers
+10)while(true) {
+11)       mutex.lock()
+12)       if (fifo_queue.empty()) {
+13)             condition.wait(mutex)
+14)       }
+15)       item = fifo_queue.remove()
+16)       mutex.unlock()
+18)       process_item(item)
+19)}
+
+Assumptions:
+1) Context Switch can occur at any point in the code
+2) Mutex.lock() & unlock() operations are atomic, context switch cannot occur while these operations are being performed
+3) The queue size is not considered as a problem, this is based on the assumption that there will be context switching happening within threads randomly to keep producing and consuming
+4) All the waiting consumer threads go into a queue called as Blocked queue
+
+Problems: 
+Scenario # 1:
+1) Consumer c1 tries to consume in empty queue
+2) Consumer c1 goes to blocked queue
+3) Producer produces an item
+4) Producer gets context switched to new consumer c2 as soon as mutex.unlock() line is executed
+5) The new consumer c2 acquires the lock and tries to check if the queue is empty
+6) Now if the context switches from consumer c2 to producer, the producer will try to reterieve the consumer c1 in the blocked queue and will try to re-acquire the lock. This will fail because the lock is owned by consumer c2. 
+
+Scenario # 2:
+7) Assuming, that producer goes to spin state (spinning for a lock until it gets the lock) and waits till c2 consumes the object from queue. The control will eventually come to producer once all consumers have tried accessing the empty queue and will end up in blocked queue. 
+condition.signal(){
+	nextThread = blockedQueue.pop();
+	mutex.lock();
+	context_switch(nextThread);
+}
+8) After this step if producer switches the context to consumer c1, the execution will be from line # 15, which will try to remove element from an empty queue this will cause an exception. 
+
+Changed Code: To overcome this problem we can have an two semaphores, which will help us with both underflow and overflow of the queue. 
+
+Semaphores empty and full;
+empty intialized to N;
+full initialized to 0;
+
+/*
+Description P & V methods:
+P -> decrements the int variable passed to it and does not proceed if its negative, goes into a blocked queue
+V -> increments the int variable passed to that semaphore and reterieves the element from blocked queue and context switches to that element 
+*/
+
+Producer
+while (true) {
+       item = generate_item()
+	   P(empty)
+       mutex.lock()
+       fifo_queue.push(item)
+       mutex.unlock()
+       V(full)
+}
+
+Consumers
+while(true) {
+		P(full)
+       mutex.lock()
+       item = fifo_queue.remove()
+       mutex.unlock()
+	   v(empty)
+       process_item(item)
+}
