@@ -29,6 +29,10 @@ Total time complexity => O(N*K*K) + O(K*N log N)
 
 since K << N, neglecting K as a constant will give us => O(N) + O(N log N) => O(N log N) 
 
+Since K << N, we can use count sort to sort the N elements which will optimize the time complexity as:
+
+O(N*K*K) + O(K*N) => O(N*K*K) => O(N) 
+
 
 Running instructions:
 
