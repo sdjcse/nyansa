@@ -22,6 +22,7 @@ class DayEntity{
 
 // Main class which parses a given file
 class LogParser{
+
     // final map that will have all values
     Map<String,DayEntity> outMap;
 
@@ -88,12 +89,39 @@ class LogParser{
     }
 
     private void printSet(DayEntity d){
-        ValueSorter vs = new ValueSorter(d.referenceMap);
+        /*ValueSorter vs = new ValueSorter(d.referenceMap);
         TreeMap<Long,Integer> sortedMap = new TreeMap<>(vs);
         sortedMap.putAll(d.referenceMap);
         for (Map.Entry<Long, Integer> entry : sortedMap.entrySet()) {
             System.out.println( siteMapper.get(entry.getKey() )+ " " + entry.getValue() );
         }
+        */
+
+
+        /*
+        Replacing the above code with count sort to sort in O(N) time
+        * */
+        // Assuming that the size of k is far small than N, so limiting it to 1000 for programming
+        Map<Integer,List<Long>> sortMap = countSorter(d.referenceMap);
+        for(int i = 1000 ; i > 0 ; i-- ){
+            if(sortMap.containsKey(i)){
+                for(Long j : sortMap.get(i)){
+                    System.out.println(siteMapper.get(j) + " " + i);
+                }
+            }
+        }
+
+    }
+
+    private Map<Integer,List<Long>> countSorter(Map<Long,Integer> inputMap){
+        Map<Integer,List<Long>> outputMap = new HashMap<>();
+        List<Long> temp;
+        for (Map.Entry<Long, Integer> entry : inputMap.entrySet()) {
+            temp = outputMap.getOrDefault(entry.getValue(),new ArrayList<>());
+            temp.add(entry.getKey());
+            outputMap.put(entry.getValue(),temp);
+        }
+        return outputMap;
     }
 
     public void resetParser(){
