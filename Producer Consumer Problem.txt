@@ -36,15 +36,17 @@ Scenario # 1:
 5) The new consumer c2 acquires the lock and tries to check if the queue is empty
 6) Now if the context switches from consumer c2 to producer, the producer will try to reterieve the consumer c1 in the blocked queue and will try to re-acquire the lock. This will fail because the lock is owned by consumer c2. 
 
-Scenario # 2:
+Scenario # 2: This scenario is the continuation of the previous one, in the previous case the failure will happen when it tries to acquire the lock whereas in this case the consumer will fail as it is trying to underflow the queue
 7) Assuming, that producer goes to spin state (spinning for a lock until it gets the lock) and waits till c2 consumes the object from queue. The control will eventually come to producer once all consumers have tried accessing the empty queue and will end up in blocked queue. 
 condition.signal(){
 	nextThread = blockedQueue.pop();
 	mutex.lock();
 	context_switch(nextThread);
 }
-8) After this step if producer switches the context to consumer c1, the execution will be from line # 15, which will try to remove element from an empty queue this will cause an exception. 
+8) After this step if producer switches the context to consumer c1, the execution will be from line # 15, which will try to remove element from an empty queue this will cause an exception. => This is the exception which is caused in the code
 
+
+// Old Solution using semaphores
 Changed Code: To overcome this problem we can have an two semaphores, which will help us with both underflow and overflow of the queue. 
 
 Semaphores empty and full;
@@ -76,3 +78,50 @@ while(true) {
 	   v(empty)
        process_item(item)
 }
+
+
+/*
+New solution: Code without semaphore
+*/
+
+To fix the code without using semaphore, we have to ensure that the lock handover from the producer to the element in the blocked queue is happening without any context switch. This is the core idea, which can be accomplished using another mutex. 
+
+contScontroller => mutex lock
+
+Producer
+while (true) {
+      item = generate_item()
+      mutex.lock()
+      fifo_queue.push(item)      
+      condition.signal()
+}
+
+Consumers
+while(true) {
+	   contScontroller.lock()
+       mutex.lock()
+       if (fifo_queue.empty()) {
+             condition.wait(mutex)
+       }
+       item = fifo_queue.remove()
+       mutex.unlock()
+	   contScontroller.unlock()
+       process_item(item)
+}
+
+and the condition.signal() method goes as follows:
+
+condition.signal(){
+contScontroller.lock()
+
+mutex.unlock()
+if(!blockedQueue.isEmpty()){
+nextThread = blockedQueue.pop();
+mutex.lock();
+context_switch(nextThread);
+
+}
+contScontroller.unlock()
+}
+
+This will ensure that the context is switched to the blocked thread ensuring that they neither underflow nor starve. The main purpose of contScontroller is to avoid context switch in the condition.signal() method between mutex unlock and lock function calls. 
